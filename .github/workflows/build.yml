@@ -17,6 +17,7 @@ jobs:
       with:
         root-reserve-mb: 8192
         temp-reserve-mb: 1024
+        build-mount-path: '/home/runner/android'
         remove-dotnet: 'true'
         remove-android: 'true'
         remove-haskell: 'true'
@@ -41,14 +42,14 @@ jobs:
 
     - name: Initialize LineageOS source
       run: |
-        mkdir -p ~/android/lineage
-        cd ~/android/lineage
+        mkdir -p /home/runner/android/lineage
+        cd /home/runner/android/lineage
         ~/bin/repo init -u https://github.com/LineageOS/android.git -b lineage-21.0 --depth=1
 
     - name: Apply Local Manifest
       run: |
-        mkdir -p ~/android/lineage/.repo/local_manifests
-        cat << 'EOF' > ~/android/lineage/.repo/local_manifests/oce.xml
+        mkdir -p /home/runner/android/lineage/.repo/local_manifests
+        cat << 'EOF' > /home/runner/android/lineage/.repo/local_manifests/oce.xml
         <?xml version="1.0" encoding="UTF-8"?>
         <manifest>
             <project name="madphone/device_htc_oce_mad" path="device/htc/oce" remote="github" />
@@ -59,12 +60,12 @@ jobs:
 
     - name: Sync Source
       run: |
-        cd ~/android/lineage
+        cd /home/runner/android/lineage
         ~/bin/repo sync -c -j8 --force-sync --no-clone-bundle --no-tags
 
     - name: Build ROM
       run: |
-        cd ~/android/lineage
+        cd /home/runner/android/lineage
         source build/envsetup.sh
         lunch lineage_oce-ap3a-userdebug || lunch lineage_oce-userdebug
         mka bacon
@@ -73,4 +74,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: lineage-21.0-oce-ROM
-        path: ~/android/lineage/out/target/product/oce/lineage-21.0-*.zip
+        path: /home/runner/android/lineage/out/target/product/oce/lineage-21.0-*.zip
