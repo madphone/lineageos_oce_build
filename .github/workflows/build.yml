@@ -12,17 +12,22 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Maximize build space
-      uses: easimon/maximize-build-space@master
-      with:
-        root-reserve-mb: 8192
-        temp-reserve-mb: 1024
-        build-mount-path: '/home/runner/android'
-        remove-dotnet: 'true'
-        remove-android: 'true'
-        remove-haskell: 'true'
-        remove-codeql: 'true'
-        remove-docker-images: 'true'
+    - name: Cleanup and Disk Space Preparation
+      run: |
+        echo "Disk space before cleanup:"
+        df -h
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo apt-get clean
+        echo "Disk space after cleanup:"
+        df -h
+        # Move the workflow's working directory to /mnt
+        sudo mkdir -p /mnt/android
+        sudo chown -R runner:runner /mnt/android
+        ln -s /mnt/android /home/runner/android
 
     - name: Set up build environment
       run: |
@@ -44,7 +49,7 @@ jobs:
       run: |
         mkdir -p /home/runner/android/lineage
         cd /home/runner/android/lineage
-        ~/bin/repo init -u https://github.com/LineageOS/android.git -b lineage-21.0 --depth=1
+        ~/bin/repo init -u https://github.com/LineageOS/android.git -b lineage-21.0 --depth=1 --filter=blob:none
 
     - name: Apply Local Manifest
       run: |
@@ -61,7 +66,9 @@ jobs:
     - name: Sync Source
       run: |
         cd /home/runner/android/lineage
-        ~/bin/repo sync -c -j8 --force-sync --no-clone-bundle --no-tags
+        df -h
+        ~/bin/repo sync -c -j4 --force-sync --no-clone-bundle --no-tags
+        df -h
 
     - name: Build ROM
       run: |
@@ -72,6 +79,7 @@ jobs:
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: lineage-21.0-oce-ROM
         path: /home/runner/android/lineage/out/target/product/oce/lineage-21.0-*.zip
